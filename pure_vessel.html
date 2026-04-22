@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hollow Knight | Boss Archive & Saves</title>
+    
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --alma: #7ad7ff; --infec: #ff8c00; --scarlet: #ff0000; --silk: #1db954; --sun: #fff1ad; 
+            --mantis: #dfc28d; --armor: #4a6fa5; --gold: #dfc28d; --bg-dark: #0a0a0a;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--bg-dark); color: white; font-family: 'Cormorant Garamond', serif; overflow-x: hidden; }
+
+        /* TRANSIÇÃO E CRT */
+        #screen-wipe { position: fixed; inset: 0; background: #000; z-index: 99999; pointer-events: none; opacity: 0; transition: opacity 1s ease-in-out; }
+        #crt-overlay { position: fixed; inset: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(255, 255, 255, 0.03) 50%); z-index: 5000; background-size: 100% 4px; pointer-events: none; display: none; }
+header { position: fixed; top: 0; width: 100%; height: 100px; display: flex; align-items: center; justify-content: flex-end; padding: 0 5%; z-index: 1000; gap: 20px; }
+        .search-box { display: flex; align-items: center; gap: 15px; padding: 8px 20px; border: 1px solid rgba(255,255,255,0.2); border-radius: 50px; cursor: pointer; background: rgba(255,255,255,0.05); backdrop-filter: blur(5px); transition: 0.3s; }
+        .search-box:hover { border-color: var(--alma); box-shadow: 0 0 15px var(--alma); }
+        .search-box span { font-family: 'Cinzel'; font-size: 0.75rem; letter-spacing: 2px; }
+
+        /* MENU DE BOSSES - CORRIGIDO SCROLL MOBILE */
+        #boss-menu { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 6000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .boss-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 40px; max-height: 80vh; overflow-y: auto; padding: 20px; scrollbar-width: thin; scrollbar-color: var(--alma) transparent; }
+        .boss-item { display: flex; align-items: center; gap: 20px; font-family: 'Cinzel'; font-size: 1.4rem; color: #1a1a1a; margin: 10px; transition: 0.4s; cursor: pointer; }
+        .boss-item img { height: 40px; filter: grayscale(1) brightness(0.5); transition: 0.4s; }
+        .boss-item:hover { transform: scale(1.1); color: white; }
+        .boss-item:hover img { filter: grayscale(0) brightness(1); }
+
+        .boss-item.pure:hover { color: var(--alma); text-shadow: 0 0 15px var(--alma); }
+        .boss-item.hollow:hover { color: var(--infec); text-shadow: 0 0 15px var(--infec); }
+        .boss-item.grimm:hover { color: var(--scarlet); text-shadow: 0 0 15px var(--scarlet); }
+        .boss-item.hornet:hover { color: var(--silk); text-shadow: 0 0 15px var(--silk); }
+        .boss-item.radiance:hover { color: var(--sun); text-shadow: 0 0 15px var(--sun); }
+        .boss-item.sisters:hover { color: var(--mantis); text-shadow: 0 0 15px var(--mantis); }
+        .boss-item.false_knight:hover { color: var(--armor); text-shadow: 0 0 15px var(--armor); }
+
+        /* PÁGINAS */
+        #home-page { height: 100vh; width: 100%; background: linear-gradient(to right, rgba(0,0,0,0.85) 40%, transparent 80%), url('principal/hk_fundo.webp'); background-size: cover; background-position: center; display: flex; flex-direction: column; justify-content: center; padding-left: 8%; }
+        #boss-page, #downloads-page, #saves-page { display: none; min-height: 100vh; position: relative; }
+
+        /* DOWNLOADS E SAVES */
+        .dl-content { max-width: 1100px; margin: 0 auto; padding: 120px 20px; text-align: center; }
+        .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 50px; }
+        .dl-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 40px; transition: 0.4s; backdrop-filter: blur(10px); }
+        .dl-card:hover { border-color: var(--alma); transform: translateY(-5px); background: rgba(122, 215, 255, 0.05); }
+        .dl-btn { display: inline-block; margin-top: 25px; padding: 10px 30px; font-family: 'Cinzel'; text-decoration: none; border: 1px solid; transition: 0.3s; font-size: 0.8rem; }
+        .btn-pc { color: var(--alma); border-color: var(--alma); }
+        .btn-pc:hover { background: var(--alma); color: black; box-shadow: 0 0 20px var(--alma); }
+        .btn-save { color: var(--gold); border-color: var(--gold); }
+        .btn-save:hover { background: var(--gold); color: black; box-shadow: 0 0 20px var(--gold); }
+
+        /* TEXTO BOSSES */
+        .content { position: relative; z-index: 2; max-width: 900px; margin: 0 auto; padding: 120px 20px; }
+        .text-block { background: rgba(0,0,0,0.9); border-left: 6px solid var(--alma); margin-bottom: 80px; padding: 45px; opacity: 0; transition: 1s; text-align: left; }
+        .text-block.open { opacity: 1; }
+        h2 { font-family: 'Cinzel'; font-size: 2.2rem; margin-bottom: 20px; }
+        .typewriter { font-size: 1.8rem; line-height: 1.7; color: rgba(255,255,255,0.95); }
+
+        .back-btn { position: fixed; top: 35px; left: 5%; z-index: 1001; font-family: 'Cinzel'; color: var(--alma); cursor: pointer; border: 1px solid var(--alma); padding: 8px 20px; background: rgba(0,0,0,0.5); transition: 0.4s; }
+        .back-btn:hover { background: var(--alma); color: #000; box-shadow: 0 0 20px var(--alma); }
+        
+        .tutorial-box { background: rgba(255,255,255,0.05); padding: 25px; border: 1px dashed rgba(255,255,255,0.2); text-align: left; }
+        .tutorial-box code { color: var(--gold); background: #000; padding: 5px; border-radius: 4px; word-break: break-all; display: inline-block; width: 100%; margin: 10px 0; font-size: 0.8rem; }
+
+        .save-warning { background: rgba(255, 140, 0, 0.1); border: 1px solid var(--infec); color: var(--infec); padding: 20px; margin-bottom: 40px; font-family: 'Cinzel'; }
+
+        /* BLOOKYE WIDGET */
+        .partner-float { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+        .partner-img { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--gold); box-shadow: 0 0 15px var(--gold); transition: 0.4s; object-fit: cover; }
+        .partner-links { display: flex; flex-direction: column; gap: 8px; opacity: 0; transform: translateY(20px); pointer-events: none; transition: 0.4s; }
+        .partner-float:hover .partner-links { opacity: 1; transform: translateY(0); pointer-events: all; }
+        .social-btn { padding: 8px 15px; font-family: 'Cinzel'; font-size: 0.7rem; text-decoration: none; color: white; background: rgba(0,0,0,0.8); border: 1px solid var(--gold); transition: 0.3s; }
+
+        .bg-layer { position: fixed; inset: 0; background-size: cover; background-position: center; filter: brightness(0.4); z-index: -2; transition: 1.5s; }
+        #bg-video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); z-index: -2; display: none; }
+
+        /* Coloque isso fora de qualquer @media para funcionar em todos os dispositivos */
+header.escondido { 
+    display: none !important; 
+}
+
+        /* MOBILE FIX */
+       @media (max-width: 768px) {
+        header {
+            /* Adicionei !important para o JS não quebrar seu grid ao voltar */
+            height: auto !important; 
+            padding: 15px !important; 
+            justify-content: center !important; 
+            display: grid !important; 
+            grid-template-columns: 1fr 1fr !important; 
+            gap: 10px !important; 
+            background: rgba(0,0,0,0.8) !important; 
+            backdrop-filter: blur(10px) !important;
+        }
+        header .search-box:nth-child(1) { grid-column: 1; }
+        header .search-box:nth-child(2) { grid-column: 2; }
+        header .search-box:nth-child(3) { grid-column: 1 / span 2; justify-content: center; }
+
+        .boss-list { grid-template-columns: 1fr; padding-top: 60px; }
+        
+        #home-page { background-position: 70% center; padding: 0 5%; text-align: center; }
+        #home-page p { font-size: 1.2rem !important; }
+
+        .dl-content { padding: 140px 15px 50px 15px; }
+        .dl-content h1 { font-size: 1.8rem !important; }
+        
+        .tutorial-container { grid-template-columns: 1fr !important; gap: 20px; }
+        .tutorial-box { padding: 20px; }
+        
+        /* Estilização da caixa de código para não vazar */
+        .tutorial-box code {
+            display: inline-block !important;
+            padding: 5px 8px !important;
+            font-size: 0.75rem !important;
+            word-break: break-all !important;
+            max-width: 100%;
+            background: #000;
+            border: 1px solid var(--gold);
+        }
+        
+        .dl-grid { grid-template-columns: 1fr !important; gap: 15px; }
+        .dl-card { padding: 25px; }
+
+        .back-btn { top: 130px; left: 15px; transform: none; font-size: 0.75rem; padding: 6px 12px; }
+        
+        .typewriter { font-size: 1.1rem !important; }
+        h2 { font-size: 1.4rem !important; }
+        #boss-title-display { max-height: 90px !important; }
+        .partner-img { width: 55px; height: 55px; }
+
+        /* ADICIONE APENAS ESTA LINHA ABAIXO: */
+        header.escondido { display: none !important; }
+
+        /* Correção de Brilho e Destaque no Mobile */
+.boss-item {
+    color: #fff !important; /* Força o texto a ficar branco no mobile */
+    opacity: 1 !important;  /* Tira o cinza transparente */
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); /* Um brilho suave padrão */
+}
+
+.boss-item img {
+    filter: grayscale(0) brightness(1) !important; /* Ícones coloridos por padrão no mobile */
+    height: 45px !important; /* Aumenta um pouco para facilitar o toque */
+}
+
+/* Garante que ao tocar, a cor do boss brilhe forte */
+.boss-item.pure { color: var(--alma) !important; text-shadow: 0 0 15px var(--alma); }
+.boss-item.hollow { color: var(--infec) !important; text-shadow: 0 0 15px var(--infec); }
+.boss-item.grimm { color: var(--scarlet) !important; text-shadow: 0 0 15px var(--scarlet); }
+.boss-item.hornet { color: var(--silk) !important; text-shadow: 0 0 15px var(--silk); }
+.boss-item.radiance { color: var(--sun) !important; text-shadow: 0 0 15px var(--sun); }
+.boss-item.sisters { color: var(--mantis) !important; text-shadow: 0 0 15px var(--mantis); }
+.boss-item.false_knight { color: var(--armor) !important; text-shadow: 0 0 15px var(--armor); }
+
+    }
+
+        
+    </style>
+</head>
+<body onclick="startHomeMusic()">
+
+    <div id="screen-wipe"></div>
+    <div id="crt-overlay"></div>
+    <audio id="bgm" loop></audio>
+
+    <header id="main-header">
+        <div class="search-box" onclick="showSaves()"><span>SAVES CUSTOM</span></div>
+        <div class="search-box" onclick="showDownloads()"><span>DOWNLOADS</span></div>
+        <div class="search-box" onclick="toggleMenu(true)"><span>BOSSES</span></div>
+    </header>
+
+    
+    <!-- WIDGET BLOOKYE -->
+    <div class="partner-float">
+        <div class="partner-links">
+            <a href="https://instagram.com/blookye_naps" target="_blank" class="social-btn">YOUTUBE</a>
+            <a href="https://discord.gg/mjzRChB82Y" target="_blank" class="social-btn">DISCORD</a>
+            <a href="youtube.com/@Blokye-live/posts" target="_blank" class="social-btn">INSTAGRAM</a>
+        </div>
+        <img src="principal/blokyee.jpg" class="partner-img">
+    </div>
+
+    <!-- MENU BOSSES -->
+    <div id="boss-menu">
+        <div style="position:absolute; top:35px; right:5%; cursor:pointer; font-family:'Cinzel'; color:var(--alma); z-index:100;" onclick="toggleMenu(false)">[ X ] FECHAR</div>
+        <div class="boss-list">
+            <div class="boss-item pure" onclick="loadBoss('pure')"><img src="principal/icon_pure.png"> PURE VESSEL</div>
+            <div class="boss-item hollow" onclick="loadBoss('hollow')"><img src="principal/icon_hollow.png"> THE HOLLOW KNIGHT</div>
+            <div class="boss-item grimm" onclick="loadBoss('grimm')"><img src="principal/icon_grimm.png"> TROUPE MASTER GRIMM</div>
+            <div class="boss-item hornet" onclick="loadBoss('hornet')"><img src="principal/icon_hornet.png"> HORNET</div>
+            <div class="boss-item radiance" onclick="loadBoss('radiance')"><img src="principal/icon_radiance.webp"> RADIANCE</div>
+            <div class="boss-item sisters" onclick="loadBoss('sisters')"><img src="principal/icon_sisters.png"> SISTERS OF BATTLE</div>
+            <div class="boss-item false_knight" onclick="loadBoss('false_knight')"><img src="principal/icon_false_knight.png"> FALSE KNIGHT</div>
+        </div>
+    </div>
+
+    <main id="home-page">
+        <div class="hero-content">
+            <img src="principal/logo_hk.png" style="max-width:600px; width:90%;">
+            <div style="font-family:'Cinzel'; color:var(--gold); letter-spacing:4px; margin:20px 0; font-size:1.5rem;">BOSS ARCHIVE INTERATIVO</div>
+            <p style="font-size:1.8rem; max-width:800px; opacity:0.7; line-height:1.4;">Um registro sagrado sobre os guerreiros de Hallownest. Estude seus movimentos, entenda sua história e domine o combate.</p>
+        </div>
+    </main>
+
+    <!-- DOWNLOADS -->
+    <div id="downloads-page">
+        <div class="back-btn" onclick="goHome()">← VOLTAR</div>
+        <div class="dl-content">
+            <h1 style="font-family:'Cinzel Decorative'; font-size:3rem; color:var(--alma); text-shadow:0 0 20px var(--alma);">DOWNLOADS</h1>
+            <div class="dl-grid">
+                <div class="dl-card"><h3>PC VERSION</h3><a href="https://www.mediafire.com/file/f0kc9wsrqttk48t/Hollow_Knight.zip/file" class="dl-btn btn-pc">BAIXAR PC</a></div>
+                <div class="dl-card"><h3>MOBILE VERSION</h3><a href="https://drive.google.com/drive/folders/1wmWQS7Ed0ygQVjVQnr8t4kWkkCJIyLDb" target="_blank" class="dl-btn btn-pc" style="color:var(--silk); border-color:var(--silk);">BAIXAR MOBILE</a></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAVES PAGE -->
+    <div id="saves-page">
+        <div class="back-btn" onclick="goHome()">← VOLTAR</div>
+        <div class="dl-content">
+            <h1 style="font-family:'Cinzel Decorative'; font-size:3rem; color:var(--gold); text-shadow:0 0 20px var(--gold); margin-bottom: 20px;">SAVES DE CLASSE & DESAFIOS</h1>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 50px;">
+                <div class="tutorial-box" style="border-color: var(--alma);">
+                    <h3 style="font-family:'Cinzel'; color:var(--alma); margin-bottom: 15px;">💻 Como instalar no PC (Windows)</h3>
+                    <p style="margin-bottom: 10px;">1. Pressione <br>Windows + R, digite o <br>comando e dê Enter:</p>
+                    <code style="
+    display: flex; 
+    padding: 4px 8px; 
+    margin-bottom: 10px; 
+    font-size: 0.85rem; 
+    background: #000; 
+    border: 1px solid var(--gold); 
+    border-radius: 4px; 
+    word-break: break-all;">
+    %AppData%\..\LocalLow<br>\Team Cherry\Hollow Knight
+   
+</code>
+
+                    <p style="font-size: 0.9rem; opacity: 0.8;">2. <b>Backup:</b> Copie seus arquivos <i>user.dat</i> para<br> outra pasta.<br>
+                    3. <b>Instalação:</b> Cole o arquivo baixado na <br>pasta.<br>
+                    4. <b>Nota:</b> O número no nome (user1, user2...) <br>define o slot no jogo.</p>
+                </div>
+
+                <div class="tutorial-box" style="border-color: var(--silk);">
+                    <h3 style="font-family:'Cinzel'; color:var(--silk); margin-bottom: 15px;">📱 Como instalar no Mobile<br> (Android)</h3>
+                     <code style="
+    display: flex; 
+    padding: 4px 8px; 
+    margin-bottom: 10px; 
+    font-size: 0.85rem; 
+    background: #000; 
+    border: 1px solid var(--gold); 
+    border-radius: 4px; 
+    word-break: break-all;">
+   Android > data > com.TeamCherry<br>.HollowKnight > files
+   
+</code>
+
+                    <p style="font-size: 0.9rem; opacity: 0.8;">1. <b>Substituição:</b> Mova o .dat baixado para <br>dentro da pasta <i>files</i>.<br>
+                    2. <b>Nome:</b> O arquivo deve se chamar <b><br>user1.dat</b> <br>para funcionar.<br>
+                    3. <b>Android 11+:</b> Clique em "Usar esta pasta" <br>quando o aviso aparecer.</p>
+                </div>
+            </div>
+
+            <div class="save-warning">
+                ⚠️ <b>Atenção aos nomes:</b> O arquivo deve estar nomeado exatamente como <b>user1.dat</b> para o jogo reconhecer.
+            </div>
+
+            <div class="dl-grid">
+                <div class="dl-card">
+                    <h3 style="color:var(--alma)">All Charms</h3>
+                    <p style="font-size:0.95rem; margin-top:10px;">Hollow Knight com todos os amuletos, habilidades e encaixes infinitos.</p>
+                    <a href="principal/saves/all_charms_hk.dat" download class="dl-btn btn-save">BAIXAR .DAT</a>
+                </div>
+                <div class="dl-card">
+                    <h3 style="color:var(--sun)">Godseeker Mode</h3>
+                    <p style="font-size:0.95rem; margin-top:10px;">Modo Buscador de Deuses com Radiância Absoluta e Panteão de Hallownest.</p>
+                    <a href="principal/saves/godseeker_hk.dat" download class="dl-btn btn-save">BAIXAR .DAT</a>
+                </div>
+                <div class="dl-card">
+                    <h3>Path of Pain</h3>
+                    <p style="font-size:0.95rem; margin-top:10px;">Caminho da Dor: todas as habilidades liberadas (exceto King Soul).</p>
+                    <a href="principal/saves/path_of_pain_hk.dat" download class="dl-btn btn-save">BAIXAR .DAT</a>
+                </div>
+                <div class="dl-card">
+                    <h3 style="color:var(--scarlet)">Steel Soul 1HP</h3>
+                    <p style="font-size:0.95rem; margin-top:10px;">Alma de Aço com apenas 1 máscara de vida e as 3 magias iniciais.</p>
+                    <a href="principal/saves/steel_soul_1hk.dat" download class="dl-btn btn-save">BAIXAR .DAT</a>
+                </div>
+                <div class="dl-card">
+                    <h3 style="color:#888">DMG Zero</h3>
+                    <p style="font-size:0.95rem; margin-top:10px;">Desafio: Ferrão com 0 de dano. Progrida usando habilidades especiais.</p>
+                    <a href="principal/saves/DMG_0hk.dat" download class="dl-btn btn-save">BAIXAR .DAT</a>
+                </div>
+                <div class="dl-card">
+                    <h3 style="color:var(--mantis)">Warrior Class</h3>
+                    <p style="font-size:0.95rem; margin-top:10px;">Classe Guerreiro: 3 máscaras, Força Inquebrável e as 3 artes do ferrão.</p>
+                    <a href="principal/saves/melle_hk.dat" download class="dl-btn btn-save">BAIXAR .DAT</a>
+                </div>
+                <div class="dl-card">
+                    <h3 style="color:var(--silk)">Mage Class</h3>
+                    <p style="font-size:0.95rem; margin-top:10px;">Classe Mago: 4 máscaras, ferrão com 1 de dano e todas as magias.</p>
+                    <a href="principal/saves/mage_class.dat" download class="dl-btn btn-save">BAIXAR .DAT</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- BOSS PAGE -->
+    <div id="boss-page">
+        <div class="back-btn" onclick="goBackToMenu()">← VOLTAR</div>
+        <div class="bg-layer" id="bg-layer"></div>
+        <video id="bg-video" autoplay muted loop playsinline></video>
+        <div class="content">
+            <img id="boss-title-display" style="display:block; margin: 0 auto 60px auto; max-height:180px;">
+            <div class="text-block" id="block1"><h2></h2><p id="p1" class="typewriter"></p></div>
+            <div class="text-block" id="block2"><h2></h2><p id="p2" class="typewriter"></p></div>
+        </div>
+    </div>
+
+    <script>
+        const bgm = document.getElementById('bgm');
+        let currentAnimationId = 0;
+        let homeMusicStarted = false;
+
+        const bossData = {
+            pure: { t1: "A Lâmina de Hallownest", p1: "No ápice da civilização de Hallownest, o Receptáculo Puro ergueu-se como o baluarte final. Uma forma perfeita, moldada pela vontade de um Rei e temperada no vazio, destinada a selar a luz que consumia o mundo.", t2: "O Selo Silencioso", p2: "Sua silhueta prateada era o símbolo de uma esperança silenciosa. Sem mente para pensar, sem vontade para quebrar.", titleImg: "pure_vessel/titulo_pure.png", bg: "pure_vessel/palacio_fundo.webp", music: "pure_vessel/pure_vessel.mp3", color: "#7ad7ff" },
+            hollow: { t1: "O Receptáculo Corrompido", p1: "O Receptáculo foi corrompido pela luz alaranjada da antiga praga. A vontade do Rei falhou diante da Radiância, e o herói que deveria salvar o reino tornou-se sua maior tragédia.", t2: "Agonia Silenciosa", p2: "Sua agonia ressoa no Ovo Negro. Um herói caído que apunhala o próprio peito para liberar a infecção.", titleImg: "sealead_vessel/titulo_hollow.png", bg: "sealead_vessel/fundo_infectado.webp", music: "sealead_vessel/sealed_vessel_theme.mp3", color: "#ff8c00" },
+            grimm: { t1: "O Mestre do Pesadelo", p1: "Através de reinos e sonhos, a Trupe do Grimm viaja para onde o fogo do pesadelo é aceso. Grimm convida o cavaleiro para uma dança mortal.", t2: "O Ritual de Fogo", p2: "Grimm é o receptáculo de uma força antiga que se alimenta das chamas e dos medos de Hallownest.", titleImg: "grimm/titulo_grimm.png", bg: "grimm/grimm_fundo.webp", music: "grimm/grimm_theme.mp3", color: "#ff0000" },
+            hornet: { t1: "A Sentinela de Fiarlongo", p1: "Guardiã das profundezas de Fiarlongo e herdeira de um destino tecido em seda. Sua agulha protege os selos do reino.", t2: "A Filha de Hallownest", p2: "Nascida de uma barganha entre o Rei e a Besta, Hornet carrega o fardo de proteger as fronteiras.", titleImg: "hornet/titulo_hornet.png", videoBg: "hornet/hornet_fundo.mp4", music: "hornet/hornet_theme.mp3", color: "#1db954" },
+            radiance: { t1: "A Luz Esquecida", p1: "A essência divina que outrora governava as mentes de Hallownest. Uma luz poderosa que consome a vontade.", t2: "O Coração da Praga", p2: "Esquecida pelo tempo e selada nos sonhos, a Radiância Absolute é o desafio final.", titleImg: "radiance/titulo_radiance.png", bg: "radiance/fundo_radiance.jpg", music: "radiance/radiance_theme.mp3", color: "#fff1ad" },
+            sisters: { t1: "As Lordes Louva-a-Deus", p1: "No ápice do Lar dos Deuses, as irmãs lutam em perfeita harmonia. Um teste de honra e velocidade.", t2: "O Trono de Honra", p2: "Aqueles que provarem seu valor perante as irmãs ganham a reverência de toda a tribo.", titleImg: "sisters/titulo_sisters.png", bg: "sisters/fundo_sisters.webp", music: "sisters/sisters_theme.mp3", color: "#dfc28d" },
+            false_knight: { t1: "A Armadura Roubada", p1: "Um verme que buscou poder na carapaça de um herói caído. Guarda a entrada com uma força roubada.", t2: "Desespero e Bravura", p2: "Sob a armadura imponente, esconde-se a fragilidade de um ser que faria tudo para proteger os seus.", titleImg: "false_knight/titulo_false_knight.png", bg: "false_knight/fundo_false_knight.jpg", music: "false_knight/false_knight_theme.mp3", color: "#4a6fa5" }
+        };
+
+        function startHomeMusic() { if(!homeMusicStarted) { bgm.src = 'principal/hk_theme.mp3'; bgm.volume = 0.5; bgm.play(); homeMusicStarted = true; } }
+        function toggleMenu(s) { document.getElementById('boss-menu').style.display = s ? 'flex' : 'none'; }
+        function showSaves() { transitionTo('saves-page'); }
+        function showDownloads() { transitionTo('downloads-page'); }
+        function goHome() { transitionTo('home-page'); }
+
+       function transitionTo(pageId) {
+    currentAnimationId++;
+    const wipe = document.getElementById('screen-wipe');
+    const header = document.getElementById('main-header'); // Seleciona o header
+    wipe.style.opacity = '1';
+
+    setTimeout(() => {
+        // Esconde todas as páginas
+        document.querySelectorAll('main, #boss-page, #downloads-page, #saves-page, #home-page').forEach(p => p.style.display = 'none');
+        
+        if (pageId === 'home-page') {
+            document.getElementById(pageId).style.display = 'flex';
+           header.classList.remove('escondido'); // LIGA o header se for a Home
+        } else {
+            document.getElementById(pageId).style.display = 'block';
+            header.classList.add('escondido'); // DESLIGA o header em qualquer outra página
+        }
+        
+        window.scrollTo(0,0);
+        wipe.style.opacity = '0';
+    }, 800);
+}
+
+       function loadBoss(id) {
+    const d = bossData[id];
+    const wipe = document.getElementById('screen-wipe');
+    currentAnimationId++;
+    const thisAnimId = currentAnimationId;
+    
+    // Limpa os textos e prepara a animação
+    document.getElementById('p1').innerHTML = ""; 
+    document.getElementById('p2').innerHTML = "";
+    document.querySelectorAll('.text-block').forEach(b => b.classList.remove('open'));
+    
+    wipe.style.opacity = '1';
+    
+    setTimeout(() => {
+        toggleMenu(false);
+        
+        // CORREÇÃO AQUI: Usa a classe para sumir em todos os aparelhos
+        document.getElementById('main-header').classList.add('escondido'); 
+
+        document.getElementById('home-page').style.display = 'none';
+        document.getElementById('boss-page').style.display = 'block';
+        document.getElementById('crt-overlay').style.display = 'block';
+        
+        document.getElementById('boss-title-display').src = d.titleImg;
+        document.getElementById('boss-title-display').style.filter = `drop-shadow(0 0 15px ${d.color})`;
+        document.documentElement.style.setProperty('--alma', d.color);
+
+        const v = document.getElementById('bg-video');
+        const l = document.getElementById('bg-layer');
+        if (d.videoBg) { 
+            v.src = d.videoBg; v.style.display = 'block'; l.style.display = 'none'; v.play(); 
+        } else { 
+            v.style.display = 'none'; l.style.display = 'block'; l.style.backgroundImage = `url('${d.bg}')`; 
+        }
+
+        bgm.src = d.music; bgm.play();
+        
+        setTimeout(async () => {
+            if (thisAnimId !== currentAnimationId) return;
+            wipe.style.opacity = '0'; 
+            const b1 = document.getElementById('block1');
+            b1.classList.add('open');
+            b1.querySelector('h2').innerText = d.t1;
+            b1.querySelector('h2').style.textShadow = `0 0 15px ${d.color}`;
+            await typeWriter(document.getElementById('p1'), d.p1, thisAnimId);
+            
+            if (thisAnimId !== currentAnimationId) return;
+            setTimeout(async () => {
+                if (thisAnimId !== currentAnimationId) return;
+                const b2 = document.getElementById('block2');
+                b2.classList.add('open');
+                b2.querySelector('h2').innerText = d.t2;
+                b2.querySelector('h2').style.textShadow = `0 0 15px ${d.color}`;
+                await typeWriter(document.getElementById('p2'), d.p2, thisAnimId);
+            }, 1000);
+        }, 500);
+    }, 1000);
+}
+
+        async function typeWriter(el, text, animId) {
+            el.innerHTML = "";
+            for (let i = 0; i < text.length; i++) {
+                if (animId !== currentAnimationId) return;
+                el.innerHTML += text.charAt(i);
+                await new Promise(r => setTimeout(r, 45));
+            }
+        }
+
+        function goBackToMenu() {
+            bgm.src = 'principal/hk_theme.mp3'; bgm.play();
+            document.getElementById('crt-overlay').style.display = 'none';
+            goHome();
+            setTimeout(() => toggleMenu(true), 1100);
+        }
+    </script>
+</body>
+</html>
